@@ -9,3 +9,5 @@
 /docs/_build
 coverage.xml
 src/urllib3/_version.py
+h2cTestingClient.py
+h2cTestingServer.py

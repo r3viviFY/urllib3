@@ -234,11 +234,13 @@ class HTTP2Connection(HTTPSConnection):
         with self._h2_conn as conn:
             end_stream = False
             while not end_stream:
-                # TODO: Arbitrary read value.
-                if received_data := self.sock.recv(65535):
-                    events = conn.receive_data(received_data)
-                    for event in events:
-                        if isinstance(event, h2.events.ResponseReceived):
+                if not (received_data := self.sock.recv(65535)):
+                    break
+                events = conn.receive_data(received_data)
+                for event in events:
+                    print(event)
+                    match type(event):
+                        case h2.events.ResponseReceived:
                             headers = HTTPHeaderDict()
                             for header, value in event.headers:
                                 if header == b":status":
@@ -247,16 +249,15 @@ class HTTP2Connection(HTTPSConnection):
                                     headers.add(
                                         header.decode("ascii"), value.decode("ascii")
                                     )
-
-                        elif isinstance(event, h2.events.DataReceived):
+                        case h2.events.DataReceived:
                             data += event.data
                             conn.acknowledge_received_data(
                                 event.flow_controlled_length, event.stream_id
                             )
-
-                        elif isinstance(event, h2.events.StreamEnded):
+                        case h2.events.StreamEnded:
                             end_stream = True
-
+                        case h2.events.ConnectionTerminated:
+                            end_stream = True
                 if data_to_send := conn.data_to_send():
                     self.sock.sendall(data_to_send)
 
